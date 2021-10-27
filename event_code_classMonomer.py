@@ -23,11 +23,11 @@ else:
     if not os.path.exists(Conf_output_dir):
         os.makedirs(Conf_output_dir)
     # define parameters
-    NumberOfMonomers = 2
+    NumberOfMonomers = 15
     L_xMin, L_xMax = 0, 10
     L_yMin, L_yMax = 0, 5
-    NumberMono_per_kind = np.array([NumberOfMonomers])
-    Radiai_per_kind = np.array([0.5])
+    NumberMono_per_kind = np.array([8, 7])
+    Radiai_per_kind = np.array([0.5, 0.2])
     Densities_per_kind = np.ones(len(NumberMono_per_kind))
     k_BT = 5
     # call constructor, which should initialize the configuration

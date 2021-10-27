@@ -99,7 +99,7 @@ class Monomers:
             # Velocities, not initalized but desired shape
             self.vel = np.empty((self.NM, self.DIM))
             self.mono_pairs = np.array([(k, l) for k in range(self.NM)
-                                        for l in range(k+1,self.NM)])
+                                        for l in range(k+1, self.NM)])
             self.next_wall_coll = CollisionEvent('wall', np.inf, 0, 0, 0)
             self.next_mono_coll = CollisionEvent('mono', np.inf, 0, 0, 0)
 
@@ -116,8 +116,8 @@ class Monomers:
         # print( self.__dict__ )
 
     def assignRadiaiMassesVelocities(self, NumberMono_per_kind=np.array([4]),
-                                      Radiai_per_kind=0.5*np.ones(1),
-                                      Densities_per_kind=np.ones(1), k_BT=1):
+                                     Radiai_per_kind=0.5*np.ones(1),
+                                     Densities_per_kind=np.ones(1), k_BT=1):
         '''
         Make this a PRIVATE function -> cannot be called outside class
         definition.
@@ -141,15 +141,22 @@ class Monomers:
         # and monomers mono_2,...,mono_6 have radius 0.5 and mass 5.5*pi*0.5^2
 
         l_nbr = len(NumberMono_per_kind)
+        current_index = 0
         for k in range(l_nbr):
             for i in range(NumberMono_per_kind[k]):
-                self.rad[l_nbr*k + i] = Radiai_per_kind[k]
-                self.mass[l_nbr*k + i] = (Densities_per_kind[k] * np.pi
-                                               * Radiai_per_kind[k]**2)
+                self.rad[current_index] = Radiai_per_kind[k]
+                self.mass[current_index] = (Densities_per_kind[k] * np.pi
+                                            * Radiai_per_kind[k]**2)
+                current_index += 1
 
         '''initialize velocities'''
         assert(k_BT > 0)
-        Emax = k_BT/self.NM
+        for k in range(self.NM):
+            standDev = np.sqrt(k_BT / self.mass[k])
+            Ypsilon_x = -np.log(np.random.uniform())
+            Ypsilon_y = -np.log(np.random.uniform())
+            self.vel[k] = [standDev * np.sqrt(2.*Ypsilon_x),
+                           standDev * np.sqrt(2.*Ypsilon_y)]
         # E_kin = sum_i m_i /2 v_i^2 = N * dim/2 k_BT
         # https://en.wikipedia.org/wiki/Ideal_gas_law#Energy_associated_with_a_gas
 
@@ -171,11 +178,21 @@ class Monomers:
         BoxLength = self.BoxLimMax - self.BoxLimMin
         while mono_new < self.NM and infiniteLoopTest < 10**4:
             infiniteLoopTest += 1
-            # -->> your turn
-            # Place one monomer after another, such that
-            # initial configuration has random positions without
-            # overlaps between monomers and with confining hard walls.
-        if p_new != self.NM:
+            x = np.random.uniform(self.BoxLimMin[0] + self.rad[mono_new],
+                                  self.BoxLimMax[0] - self.rad[mono_new])
+            y = np.random.uniform(self.BoxLimMin[1] + self.rad[mono_new],
+                                  self.BoxLimMax[1] - self.rad[mono_new])
+            new_pos = np.array([x, y])
+            overlap = False
+            for i in range(mono_new):
+                if (np.linalg.norm(new_pos - self.pos[i]) < self.rad[mono_new]
+                        + self.rad[i]):
+                    overlap = True
+                    break
+            if not overlap:
+                self.pos[mono_new] = new_pos
+                mono_new += 1
+        if mono_new != self.NM:
             print('Failed to initialize all particle positions.'
                   '\nIncrease simulation box size!')
             exit()
@@ -233,38 +250,40 @@ class Monomers:
         scal >= 0 or Omega < 0, then remaining dt is infinity.
         '''
 
-        mono_i = self.mono_pairs[:, 0]
-        mono_j = self.mono_pairs[:, 1]
-        delta_pos = np.zeros((len(mono_i), self.DIM))
-        delta_vel = np.zeros((len(mono_i), self.DIM))
-        T = np.zeros(len(mono_i))
-        A = np.zeros(len(mono_i))
-        B = np.zeros(len(mono_i))
-        Omega = np.zeros(len(mono_i))
-        for k in range(len(mono_i)):
-            for i in range(self.DIM):
-                delta_pos[k, i] = (self.pos[mono_i[k], i]
-                                   - self.pos[mono_j[k], i])
-                delta_vel[k, i] = (self.vel[mono_i[k], i]
-                                   - self.vel[mono_j[k], i])
+        mono_i = self.mono_pairs[:, 0]  # List of collision partner 1
+        mono_j = self.mono_pairs[:, 1]  # List of collision partner 2
+        print('mono_i = ', mono_i)
 
-                A[k] = delta_vel[k, 0]**2 + delta_vel[k, 1]**2
-                B[k] = (2*delta_vel[k, 0]*delta_pos[k, 0]
-                        + 2*delta_vel[k, 1]*delta_pos[k, 1])
-                Omega[k] = (B[k]**2 - 4*A[k]
-                            * (delta_pos[k, 0]**2 + delta_pos[k, 1]**2
-                            - (self.rad[mono_i[k]] + self.rad[mono_j[k]])**2))
-                if Omega[k] < 0 or B[k] >= 0:
-                    T[k] = np.inf
-                else:
-                    T[k] = 1/(2*A[k])*(-B[k] - np.sqrt(Omega[k]))
+        delta_x0 = self.pos[mono_i, 0] - self.pos[mono_j, 0]
+        delta_y0 = self.pos[mono_i, 1] - self.pos[mono_j, 1]
 
-        c_mins_index = np.where(T == np.min(T))
-        minCollTime = T[c_mins_index]
+        delta_vx = self.vel[mono_i, 0] - self.vel[mono_j, 0]
+        delta_vy = self.vel[mono_i, 1] - self.vel[mono_j, 1]
+
+        a = delta_vx * delta_vx + delta_vy * delta_vy
+        b = 2*(delta_vx*delta_x0 + delta_vy*delta_y0)
+        c = (delta_x0**2 + delta_y0**2
+             - (self.rad[mono_i] + self.rad[mono_j])**2)
+
+        Omega = b**2 - 4*a*c
+        Omega = np.where((Omega > 0) & (b < 0), Omega, np.inf)
+
+        dt_collision_minus = 1/(2*a)*(-b - np.sqrt(Omega))
+        dt_collision_plus = 1/(2*a)*(-b + np.sqrt(Omega))
+
+        dt_collision = np.array([dt_collision_minus, dt_collision_plus])
+        dt_collision_index = np.where(dt_collision > 0,
+                                      dt_collision,
+                                      np.inf)
+        dt_collision_index = np.where(dt_collision_index
+                                      == np.min(dt_collision_index))
+
+        minCollTime = dt_collision[dt_collision_index[0][0],
+                                   dt_collision_index[1][0]]
         if minCollTime < 1e-13:
-            minCollTime = np.inf
-        collision_disk_1 = mono_i[c_mins_index]
-        collision_disk_2 = mono_j[c_mins_index]
+            minCollTime = [np.inf]
+        collision_disk_1 = mono_i[dt_collision_index[1]][0]
+        collision_disk_2 = mono_j[dt_collision_index[1]][0]
 
         self.next_mono_coll.dt = minCollTime
         self.next_mono_coll.mono_1 = collision_disk_1
