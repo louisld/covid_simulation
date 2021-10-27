@@ -21,7 +21,7 @@ else:
     '''Initialize system with following parameters'''
     if not os.path.exists(Conf_output_dir):
         os.makedirs(Conf_output_dir)
-    NumberOfMonomers, NumberOfDimers = 2, 1
+    NumberOfMonomers, NumberOfDimers = 5, 1
     L_xMin, L_xMax = 0, 5
     L_yMin, L_yMax = 0, 5
     NumberMono_per_kind = np.array([NumberOfMonomers])

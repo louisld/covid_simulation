@@ -473,21 +473,28 @@ class Dimers(Monomers):
         definition initialize random positions without overlap between monomers
         and wall
         '''
+        super().assignRandomMonoPos(start_index=self.ND)
         dimer_new_index, infiniteLoopTest = 0, 0
-        while dimer_new_index < self.ND and infiniteLoopTest < 10**4:
+        while dimer_new_index < self.ND/2 + 1 and infiniteLoopTest < 10**4:
             infiniteLoopTest += 1
             mono_i, mono_j = dimer_new = self.dimer_pairs[dimer_new_index]
-            dimer_new[0].assignRandomMonoPos()
-            r = np.random.uniform(mono_i.rad + mono_j.rad,
-                                  dimer_new.bond_length)
+            r = np.random.uniform(self.rad[mono_i] + self.rad[mono_j],
+                                  self.bond_length[mono_i])
             theta = np.random.uniform(0, 2*np.pi)
-            dimer_new[1].pos = [r*np.cos(theta), r*np.sin(theta)]
+            self.pos[mono_i] = [self.pos[mono_j, 0] + r*np.cos(theta),
+                                self.pos[mono_j, 1] + r*np.sin(theta)]
             create_dimer_ok = True
-            for i in range(dimer_new_index * self.ND):
-                if (np.linalg.norm(dimer_new[1].pos - self.MN[i])
-                        < dimer_new[1].rad + self.MN[i].rad):
+            for i in range(self.ND, self.NM):
+                if (np.linalg.norm(self.pos[mono_i] - self.pos[i])
+                        < self.rad[mono_i] + self.rad[i]):
                     create_dimer_ok = False
                     break
+            if create_dimer_ok:
+                for i in range(dimer_new_index):
+                    if (np.linalg.norm(self.pos[mono_i] - self.pos[i])
+                            < self.rad[mono_i] + self.rad[i]):
+                        create_dimer_ok = False
+                        break
             if create_dimer_ok:
                 dimer_new_index += 1
         if dimer_new_index != self.ND:
@@ -550,8 +557,11 @@ class Dimers(Monomers):
         c = (delta_x0**2 + delta_y0**2
              - (self.bond_length[mono_i])**2)
 
-        dt_collision_minus = 1/(2*a)*(-b - np.sqrt(b**2 - 4*a*c))
-        dt_collision_plus = 1/(2*a)*(-b + np.sqrt(b**2 - 4*a*c))
+        Omega = b**2 - 4*a*c
+        Omega = np.where((Omega > 0) & (b > 0), Omega, np.inf)
+
+        dt_collision_minus = 1/(2*a)*(-b - np.sqrt(Omega))
+        dt_collision_plus = 1/(2*a)*(-b + np.sqrt(Omega))
 
         dt_collision = np.array([dt_collision_minus, dt_collision_plus])
         dt_collision_index = np.where(dt_collision > 0,
@@ -560,13 +570,14 @@ class Dimers(Monomers):
         dt_collision_index = np.where(dt_collision_index
                                       == np.min(dt_collision_index))
 
-        minCollTime = dt_collision[dt_collision_index]
+        minCollTime = dt_collision[dt_collision_index[0][0],
+                                   dt_collision_index[1][0]]
         if minCollTime < 1e-13:
             minCollTime = [np.inf]
         collision_disk_1 = mono_i[dt_collision_index[1]][0]
         collision_disk_2 = mono_j[dt_collision_index[1]][0]
 
-        self.next_dimer_coll.dt = minCollTime[0]
+        self.next_dimer_coll.dt = minCollTime
 
         self.next_dimer_coll.mono_1 = collision_disk_1
         self.next_dimer_coll.mono_2 = collision_disk_2
