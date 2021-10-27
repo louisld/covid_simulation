@@ -23,13 +23,13 @@ else:
     if not os.path.exists(Conf_output_dir):
         os.makedirs(Conf_output_dir)
     # define parameters
-    NumberOfMonomers = 15
+    NumberOfMonomers = 200
     L_xMin, L_xMax = 0, 10
     L_yMin, L_yMax = 0, 5
-    NumberMono_per_kind = np.array([8, 7])
-    Radiai_per_kind = np.array([0.5, 0.2])
+    NumberMono_per_kind = np.array([NumberOfMonomers])
+    Radiai_per_kind = np.array([0.05])
     Densities_per_kind = np.ones(len(NumberMono_per_kind))
-    k_BT = 5
+    k_BT = 0.005
     # call constructor, which should initialize the configuration
     mols = pc.Monomers(NumberOfMonomers, L_xMin, L_xMax, L_yMin, L_yMax,
                        NumberMono_per_kind, Radiai_per_kind,
@@ -95,12 +95,12 @@ ax.add_patch(rect)
 
 
 # plotting all monomers as solid circles of individual color
-MonomerColors = np.linspace(0.2, 0.95, mols.NM)
+MonomerColors = np.array(["#AAC6CA"]*mols.NM)
 Width, Hight, Angle = 2*mols.rad, 2*mols.rad, np.zeros(mols.NM)
 collection = EllipseCollection(Width, Hight, Angle, units='x',
                                offsets=mols.pos, transOffset=ax.transData,
                                cmap='nipy_spectral', edgecolor='k')
-collection.set_array(MonomerColors)
+collection.set_color(MonomerColors)
 collection.set_clim(0, 1)  # <--- we set the limit for the color code
 ax.add_collection(collection)
 
