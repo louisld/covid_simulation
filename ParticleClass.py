@@ -103,6 +103,12 @@ class Monomers:
             self.next_wall_coll = CollisionEvent('wall', np.inf, 0, 0, 0)
             self.next_mono_coll = CollisionEvent('mono', np.inf, 0, 0, 0)
 
+            """
+            Covid simulation
+            """
+            # 0 : healthy, 1 : sick, 2 : recovered
+            self.health_state = np.zeros(self.NM)
+
             self.assignRadiaiMassesVelocities(
                 NumberMono_per_kind,
                 Radiai_per_kind,

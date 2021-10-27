@@ -75,6 +75,11 @@ def MolecularDynamicsLoop(frame):
     # mols.snapshot( FileName = Snapshot_output_dir + '/Conf_t%.8f_0.png' % t,
     # Title = '$t = %.8f$' % t)
     plt.title(f"$t = {t}$, remaining frames = {NumberOfFrames-(frame+1)}")
+    colors = list(map(lambda x: "#AAC6CA"
+                      if x == 0 else ("#CC5756"
+                                      if x == 1 else "#CCC18D"),
+                      mols.health_state))
+    collection.set_color(colors)
     collection.set_offsets(mols.pos)
     return collection
 
@@ -95,7 +100,7 @@ ax.add_patch(rect)
 
 
 # plotting all monomers as solid circles of individual color
-MonomerColors = np.array(["#AAC6CA"]*mols.NM)
+MonomerColors = np.array(["#000000"]*mols.NM)
 Width, Hight, Angle = 2*mols.rad, 2*mols.rad, np.zeros(mols.NM)
 collection = EllipseCollection(Width, Hight, Angle, units='x',
                                offsets=mols.pos, transOffset=ax.transData,
