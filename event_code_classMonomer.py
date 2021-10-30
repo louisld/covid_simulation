@@ -45,7 +45,12 @@ mols.snapshot(FileName=Snapshot_output_dir + '/InitialConf.png',
 t = 0.0
 dt = 0.02
 NumberOfFrames = 1000
-next_event = mols.compute_next_event()
+next_event = mols.compute_next_event(t)
+
+health_plot_t = [0]
+health_plot_sick = [5]
+health_plot_healthy = [200]
+health_plot_healed = [200]
 
 
 def MolecularDynamicsLoop(frame):
@@ -60,12 +65,26 @@ def MolecularDynamicsLoop(frame):
         mols.pos += mols.vel * next_event.dt
         t += next_event.dt
         mols.compute_new_velocities(next_event)
-        next_event = mols.compute_next_event()
+        mols.compute_new_health_state(next_event, t)
+        next_event = mols.compute_next_event(t)
 
     dt_remaining = next_frame_t - t
     mols.pos += mols.vel * dt_remaining
     t += dt_remaining
-    next_event = mols.compute_next_event()
+    next_event = mols.compute_next_event(t)
+    health_plot_t.append(t)
+    health_plot_healthy.append(200)
+    line_healthy.set_data(health_plot_t, health_plot_healthy)
+    f_healthy = ax[0].fill_between(health_plot_t, health_plot_healthy,
+                                   color="#AAC6CA")
+    health_plot_sick.append(np.count_nonzero(mols.health_state == 1))
+    line_sick.set_data(health_plot_t, health_plot_sick)
+    f_sick = ax[0].fill_between(health_plot_t, health_plot_sick,
+                                color="#CC5756")
+    health_plot_healed.append(200 - np.count_nonzero(mols.health_state == 2))
+    line_healed.set_data(health_plot_t, health_plot_healed)
+    f_healed = ax[0].fill_between(health_plot_t, health_plot_healed,
+                                  health_plot_healthy, color="#CCC18D")
 
     # --> write your event-driven loop
     # --> we want a simulation in constant time steps dt
@@ -81,33 +100,40 @@ def MolecularDynamicsLoop(frame):
                       mols.health_state))
     collection.set_color(colors)
     collection.set_offsets(mols.pos)
-    return collection
+    return (collection, line_healthy, line_sick, line_healed,
+            f_healthy, f_sick, f_healed)
 
 
 '''We define and initalize the plot for the animation'''
-fig, ax = plt.subplots()
+fig, ax = plt.subplots(ncols=1, nrows=2, gridspec_kw={'height_ratios': [1, 4]})
 L_xMin, L_yMin = mols.BoxLimMin  # not defined if initalized by file
 L_xMax, L_yMax = mols.BoxLimMax  # not defined if initalized by file
 BorderGap = 0.1*(L_xMax - L_xMin)
-ax.set_xlim(L_xMin-BorderGap, L_xMax+BorderGap)
-ax.set_ylim(L_yMin-BorderGap, L_yMax+BorderGap)
-ax.set_aspect('equal')
+ax[1].set_xlim(L_xMin-BorderGap, L_xMax+BorderGap)
+ax[1].set_ylim(L_yMin-BorderGap, L_yMax+BorderGap)
+ax[1].set_aspect('equal')
 
 # confining hard walls plotted as dashed lines
 rect = mpatches.Rectangle((L_xMin, L_yMin), L_xMax-L_xMin, L_yMax-L_yMin,
                           linestyle='dashed', ec='gray', fc='None')
-ax.add_patch(rect)
+ax[1].add_patch(rect)
 
 
 # plotting all monomers as solid circles of individual color
 MonomerColors = np.array(["#000000"]*mols.NM)
 Width, Hight, Angle = 2*mols.rad, 2*mols.rad, np.zeros(mols.NM)
 collection = EllipseCollection(Width, Hight, Angle, units='x',
-                               offsets=mols.pos, transOffset=ax.transData,
+                               offsets=mols.pos, transOffset=ax[1].transData,
                                cmap='nipy_spectral', edgecolor='k')
 collection.set_color(MonomerColors)
 collection.set_clim(0, 1)  # <--- we set the limit for the color code
-ax.add_collection(collection)
+ax[1].add_collection(collection)
+
+line_healthy, = ax[0].plot(health_plot_t, health_plot_healthy, color="#AAC6CA")
+line_sick, = ax[0].plot(health_plot_t, health_plot_sick, color="#CC5756")
+line_healed, = ax[0].plot(health_plot_t, health_plot_healed, color="#CCC18D")
+ax[0].set_xlim(0, NumberOfFrames*dt)
+ax[0].set_ylim(0, NumberOfMonomers)
 
 '''
 Create the animation, i.e. looping NumberOfFrames over the update function

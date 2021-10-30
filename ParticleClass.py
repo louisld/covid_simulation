@@ -78,7 +78,8 @@ class Monomers:
     def __init__(self, NumberOfMonomers=4, L_xMin=0, L_xMax=1, L_yMin=0,
                  L_yMax=1, NumberMono_per_kind=np.array([4]),
                  Radiai_per_kind=0.5*np.ones(1), Densities_per_kind=np.ones(1),
-                 k_BT=1, FilePath='./Configuration.p'):
+                 k_BT=1, FilePath='./Configuration.p', sick=5,
+                 healing_time=2):
         try:
             self.__dict__ = pickle.load(open(FilePath, "rb"))
             print(f"IMPORTANT! System is initialized from file {FilePath}, "
@@ -108,6 +109,10 @@ class Monomers:
             """
             # 0 : healthy, 1 : sick, 2 : recovered
             self.health_state = np.zeros(self.NM)
+            self.health_state[:sick] = 1
+            self.infection_t = np.ones(self.NM)*np.inf
+            self.infection_t[:sick] = 0
+            self.healing_time = healing_time
 
             self.assignRadiaiMassesVelocities(
                 NumberMono_per_kind,
@@ -258,7 +263,7 @@ class Monomers:
 
         mono_i = self.mono_pairs[:, 0]  # List of collision partner 1
         mono_j = self.mono_pairs[:, 1]  # List of collision partner 2
-        print('mono_i = ', mono_i)
+        # print('mono_i = ', mono_i)
 
         delta_x0 = self.pos[mono_i, 0] - self.pos[mono_j, 0]
         delta_y0 = self.pos[mono_i, 1] - self.pos[mono_j, 1]
@@ -295,7 +300,7 @@ class Monomers:
         self.next_mono_coll.mono_1 = collision_disk_1
         self.next_mono_coll.mono_2 = collision_disk_2
 
-    def compute_next_event(self):
+    def compute_next_event(self, t):
         '''
         Function gets event information about:
         1) next possible wall event
@@ -306,6 +311,12 @@ class Monomers:
 
         self.Wall_time()
         self.Mono_pair_time()
+
+        for i in range(self.NM):
+            if (self.health_state[i] == 1
+                    and self.infection_t[i] + self.healing_time < t):
+                self.health_state[i] = 2
+
         if self.next_wall_coll.dt < self.next_mono_coll.dt:
             return self.next_wall_coll
         else:
@@ -320,8 +331,6 @@ class Monomers:
         Ellastic pair collisions follow:
         https://en.wikipedia.org/wiki/Elastic_collision#Two-dimensional_collision_with_two_moving_objects
         '''
-
-        print(next_event)
         if next_event.Type == "wall":
             self.vel[next_event.mono_1, next_event.w_dir] *= -1
         else:
@@ -342,6 +351,17 @@ class Monomers:
                                               + self.mass[next_event.mono_2]))
                                            * delta_hat @ np.transpose(delta_v)
                                            * delta_hat)
+
+    def compute_new_health_state(self, next_event, t):
+        if next_event.Type == "mono":
+            if (self.health_state[next_event.mono_1] == 1
+                    and self.health_state[next_event.mono_2] == 0):
+                self.health_state[next_event.mono_2] = 1
+                self.infection_t[next_event.mono_2] = t
+            elif (self.health_state[next_event.mono_2] == 1
+                    and self.health_state[next_event.mono_1] == 0):
+                self.health_state[next_event.mono_1] = 1
+                self.infection_t[next_event.mono_1] = t
 
     def snapshot(self, FileName='./snapshot.png', Title='$t = $?'):
         '''
@@ -544,7 +564,7 @@ class Dimers(Monomers):
         '''
         mono_i = self.dimer_pairs[:, 0]  # List of collision partner 1
         mono_j = self.dimer_pairs[:, 1]  # List of collision partner 2
-        print('mono_i = ', mono_i)
+        # print('mono_i = ', mono_i)
 
         delta_x0 = self.pos[mono_i, 0] - self.pos[mono_j, 0]
         delta_y0 = self.pos[mono_i, 1] - self.pos[mono_j, 1]
