@@ -80,7 +80,7 @@ class Monomers:
                  Radiai_per_kind=0.5*np.ones(1), Densities_per_kind=np.ones(1),
                  k_BT=1, lockdown_position=-2, lockdown_opening=1,
                  wall_thickness=1,  FilePath='./Configuration.p', sick=5,
-                 healing_time=2):
+                 healing_time=2, healing_delta=0.5):
         try:
             self.__dict__ = pickle.load(open(FilePath, "rb"))
             print(f"IMPORTANT! System is initialized from file {FilePath}, "
@@ -116,8 +116,13 @@ class Monomers:
             self.health_state = np.zeros(self.NM)
             self.health_state[:sick] = 1
             self.infection_t = np.ones(self.NM)*np.inf
+            self.healing_t = -np.ones(self.NM)*np.inf
             self.infection_t[:sick] = 0
+            self.healing_t[:sick] = np.random.normal(healing_time,
+                                                     healing_delta,
+                                                     sick)
             self.healing_time = healing_time
+            self.healing_delta = healing_delta
 
             self.assignRadiaiMassesVelocities(
                 NumberMono_per_kind,
@@ -327,7 +332,7 @@ class Monomers:
 
         for i in range(self.NM):
             if (self.health_state[i] == 1
-                    and self.infection_t[i] + self.healing_time < t):
+                    and self.healing_t[i] < t):
                 self.health_state[i] = 2
 
         if self.next_wall_coll.dt < self.next_mono_coll.dt:
@@ -371,10 +376,19 @@ class Monomers:
                     and self.health_state[next_event.mono_2] == 0):
                 self.health_state[next_event.mono_2] = 1
                 self.infection_t[next_event.mono_2] = t
+                self.healing_t[next_event.mono_2] = (t
+                                                     + np.random.normal(
+                                                      loc=self.healing_time,
+                                                      scale=self.healing_delta
+                                                     ))
             elif (self.health_state[next_event.mono_2] == 1
                     and self.health_state[next_event.mono_1] == 0):
                 self.health_state[next_event.mono_1] = 1
-                self.infection_t[next_event.mono_1] = t
+                self.healing_t[next_event.mono_1] = (t
+                                                     + np.random.normal(
+                                                      loc=self.healing_time,
+                                                      scale=self.healing_delta
+                                                     ))
 
     def snapshot(self, FileName='./snapshot.png', Title='$t = $?'):
         '''
