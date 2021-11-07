@@ -78,7 +78,8 @@ class Monomers:
     def __init__(self, NumberOfMonomers=4, L_xMin=0, L_xMax=1, L_yMin=0,
                  L_yMax=1, NumberMono_per_kind=np.array([4]),
                  Radiai_per_kind=0.5*np.ones(1), Densities_per_kind=np.ones(1),
-                 k_BT=1, FilePath='./Configuration.p', sick=5,
+                 k_BT=1, lockdown_position=-2, lockdown_opening=1,
+                 wall_thickness=1,  FilePath='./Configuration.p', sick=5,
                  healing_time=2):
         try:
             self.__dict__ = pickle.load(open(FilePath, "rb"))
@@ -107,6 +108,10 @@ class Monomers:
             """
             Covid simulation
             """
+            # lockdown walls
+            self.lockdown_position = lockdown_position
+            self.lockdown_opening = lockdown_opening
+            self.wall_thickness = wall_thickness
             # 0 : healthy, 1 : sick, 2 : recovered
             self.health_state = np.zeros(self.NM)
             self.health_state[:sick] = 1
@@ -189,8 +194,17 @@ class Monomers:
         BoxLength = self.BoxLimMax - self.BoxLimMin
         while mono_new < self.NM and infiniteLoopTest < 10**4:
             infiniteLoopTest += 1
-            x = np.random.uniform(self.BoxLimMin[0] + self.rad[mono_new],
-                                  self.BoxLimMax[0] - self.rad[mono_new])
+            a = self.BoxLimMin[0] + self.rad[mono_new]
+            b = (self.BoxLimMin[0] + self.lockdown_position
+                 - self.wall_thickness/2 - self.rad[mono_new])
+            c = (self.BoxLimMin[0] + self.lockdown_position
+                 + self.wall_thickness/2 + self.rad[mono_new])
+            d = self.BoxLimMax[0] - self.rad[mono_new]
+            prob = np.array([b-a, d-c])
+            prob = prob/prob.sum()
+            x = np.random.choice([np.random.uniform(a, b),
+                                  np.random.uniform(c, d)],
+                                 p=prob)
             y = np.random.uniform(self.BoxLimMin[1] + self.rad[mono_new],
                                   self.BoxLimMax[1] - self.rad[mono_new])
             new_pos = np.array([x, y])
@@ -227,7 +241,6 @@ class Monomers:
         if v > 0: solve BoxLimMax - rad = x + v * dt
         else:     solve BoxLimMin + rad = x + v * dt
         '''
-
         collision_list = np.zeros((self.NM, self.DIM))
         collision_dt = np.zeros((self.NM, self.DIM))
         # Calculate all collision times
@@ -335,20 +348,20 @@ class Monomers:
             self.vel[next_event.mono_1, next_event.w_dir] *= -1
         else:
             delta = (np.array(self.pos[next_event.mono_2]
-                     - self.pos[next_event.mono_1]))
+                              - self.pos[next_event.mono_1]))
             delta_hat = delta / np.linalg.norm(delta)
             delta_v = (np.array(self.vel[next_event.mono_1]
-                       - self.vel[next_event.mono_2]))
+                                - self.vel[next_event.mono_2]))
             self.vel[next_event.mono_1] = (self.vel[next_event.mono_1]
                                            - (2*self.mass[next_event.mono_2]
-                                           / (self.mass[next_event.mono_1]
-                                              + self.mass[next_event.mono_2]))
+                                              / (self.mass[next_event.mono_1]
+                                                 + self.mass[next_event.mono_2]))
                                            * delta_hat @ np.transpose(delta_v)
                                            * delta_hat)
             self.vel[next_event.mono_2] = (self.vel[next_event.mono_2]
                                            + (2*self.mass[next_event.mono_1]
-                                           / (self.mass[next_event.mono_1]
-                                              + self.mass[next_event.mono_2]))
+                                              / (self.mass[next_event.mono_1]
+                                                 + self.mass[next_event.mono_2]))
                                            * delta_hat @ np.transpose(delta_v)
                                            * delta_hat)
 
@@ -473,7 +486,7 @@ class Dimers(Monomers):
             self.ND = NumberOfDimers
             # choice 2 -> more practical than [2*k,2*k+1]
             self.dimer_pairs = np.array([[k, self.ND+k]
-                                        for k in range(self.ND)])
+                                         for k in range(self.ND)])
             mono_i, mono_j = self.dimer_pairs[:, 0], self.dimer_pairs[:, 1]
             self.bond_length = bond_length_scale * (self.rad[mono_i]
                                                     + self.rad[mono_j])

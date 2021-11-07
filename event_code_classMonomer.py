@@ -26,6 +26,9 @@ else:
     NumberOfMonomers = 200
     L_xMin, L_xMax = 0, 10
     L_yMin, L_yMax = 0, 5
+    lockdown_position = 3
+    lockdown_opening = 1
+    wall_thickness = 0.5
     NumberMono_per_kind = np.array([NumberOfMonomers])
     Radiai_per_kind = np.array([0.05])
     Densities_per_kind = np.ones(len(NumberMono_per_kind))
@@ -33,7 +36,8 @@ else:
     # call constructor, which should initialize the configuration
     mols = pc.Monomers(NumberOfMonomers, L_xMin, L_xMax, L_yMin, L_yMax,
                        NumberMono_per_kind, Radiai_per_kind,
-                       Densities_per_kind, k_BT)
+                       Densities_per_kind, k_BT, lockdown_position,
+                       wall_thickness)
 
 mols.snapshot(FileName=Snapshot_output_dir + '/InitialConf.png',
               Title='$t = 0$')
@@ -116,7 +120,17 @@ ax[1].set_aspect('equal')
 # confining hard walls plotted as dashed lines
 rect = mpatches.Rectangle((L_xMin, L_yMin), L_xMax-L_xMin, L_yMax-L_yMin,
                           linestyle='dashed', ec='gray', fc='None')
+wall_down = mpatches.Rectangle((lockdown_position - wall_thickness/2, L_yMin),
+                               wall_thickness,
+                               (L_yMax - L_yMin - lockdown_opening)/2,
+                               linestyle="dashed", ec="gray", fc="none")
+wall_up = mpatches.Rectangle((lockdown_position - wall_thickness/2, L_yMax),
+                             wall_thickness,
+                             -(L_yMax - L_yMin - lockdown_opening)/2,
+                             linestyle="dashed", ec="gray", fc="none")
 ax[1].add_patch(rect)
+ax[1].add_patch(wall_down)
+ax[1].add_patch(wall_up)
 
 
 # plotting all monomers as solid circles of individual color
