@@ -217,23 +217,25 @@ class Monomers:
         BoxLength = self.BoxLimMax - self.BoxLimMin
         while mono_new < self.NM and infiniteLoopTest < 10**4:
             infiniteLoopTest += 1
-            # a = self.BoxLimMin[0] + self.rad[mono_new]
-            # b = (self.BoxLimMin[0] + self.frontier_position
-            #      - self.rad[mono_new])
-            # c = (self.BoxLimMin[0] + self.frontier_position
-            #      + self.rad[mono_new])
-            # d = self.BoxLimMax[0] - self.rad[mono_new]
-            # prob = np.array([b-a, d-c])
-            # prob = prob/prob.sum()
-            # x = np.random.choice([np.random.uniform(a, b),
-            #                       np.random.uniform(c, d)],
-            #                      p=prob)
-            # y = np.random.uniform(self.BoxLimMin[1] + self.rad[mono_new],
-            #                       self.BoxLimMax[1] - self.rad[mono_new])
-            x = np.random.uniform(self.BoxLimMin[0] + self.rad[mono_new],
-                                  self.BoxLimMax[0] - self.rad[mono_new])
-            y = np.random.uniform(self.BoxLimMin[1] + self.rad[mono_new],
-                                  self.BoxLimMax[1] - self.rad[mono_new])
+            if self.close_frontier:
+                a = self.BoxLimMin[0] + self.rad[mono_new]
+                b = (self.BoxLimMin[0] + self.frontier_position
+                     - self.rad[mono_new])
+                c = (self.BoxLimMin[0] + self.frontier_position
+                     + self.rad[mono_new])
+                d = self.BoxLimMax[0] - self.rad[mono_new]
+                prob = np.array([b-a, d-c])
+                prob = prob/prob.sum()
+                x = np.random.choice([np.random.uniform(a, b),
+                                      np.random.uniform(c, d)],
+                                     p=prob)
+                y = np.random.uniform(self.BoxLimMin[1] + self.rad[mono_new],
+                                      self.BoxLimMax[1] - self.rad[mono_new])
+            else:
+                x = np.random.uniform(self.BoxLimMin[0] + self.rad[mono_new],
+                                      self.BoxLimMax[0] - self.rad[mono_new])
+                y = np.random.uniform(self.BoxLimMin[1] + self.rad[mono_new],
+                                      self.BoxLimMax[1] - self.rad[mono_new])
             new_pos = np.array([x, y])
             overlap = False
             for i in range(mono_new):

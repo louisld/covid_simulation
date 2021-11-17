@@ -35,12 +35,18 @@ else:
     healing_delta = 0.5
     lockdown = False
     number_of_confined = 150
+    close_frontier = True
+    frontier_position = 2
+    frontier_opening = 1
     # call constructor, which should initialize the configuration
     mols = pc.Monomers(NumberOfMonomers, L_xMin, L_xMax, L_yMin, L_yMax,
                        NumberMono_per_kind, Radiai_per_kind,
                        Densities_per_kind, k_BT, sick=sick,
                        healing_time=healing_time, healing_delta=healing_delta,
-                       lockdown=lockdown, number_of_confined=number_of_confined)
+                       lockdown=lockdown, number_of_confined=number_of_confined,
+                       close_frontier=close_frontier,
+                       frontier_opening=frontier_opening,
+                       frontier_position=frontier_position)
 
 mols.snapshot(FileName=Snapshot_output_dir + '/InitialConf.png',
               Title='$t = 0$')
@@ -123,17 +129,11 @@ ax[1].set_aspect('equal')
 # confining hard walls plotted as dashed lines
 rect = mpatches.Rectangle((L_xMin, L_yMin), L_xMax-L_xMin, L_yMax-L_yMin,
                           linestyle='dashed', ec='gray', fc='None')
-# wall_down = mpatches.Rectangle((lockdown_position - wall_thickness/2, L_yMin),
-#                                wall_thickness,
-#                                (L_yMax - L_yMin - lockdown_opening)/2,
-#                                linestyle="dashed", ec="gray", fc="none")
-# wall_up = mpatches.Rectangle((lockdown_position - wall_thickness/2, L_yMax),
-#                              wall_thickness,
-#                              -(L_yMax - L_yMin - lockdown_opening)/2,
-#                              linestyle="dashed", ec="gray", fc="none")
+wall_down = ax[1].vlines(frontier_position, L_yMin, L_yMax/2, color="gray",
+                         linestyle="dashed", fc="none")
+wall_up = ax[1].vlines(frontier_position, L_yMax/2, L_yMax, color="gray",
+                       linestyle="dashed", fc="none")
 ax[1].add_patch(rect)
-# ax[1].add_patch(wall_down)
-# ax[1].add_patch(wall_up)
 
 
 # plotting all monomers as solid circles of individual color
@@ -158,8 +158,8 @@ Create the animation, i.e. looping NumberOfFrames over the update function
 Delay_in_ms = 40  # dely between images/frames for plt.show()
 ani = FuncAnimation(fig, MolecularDynamicsLoop, frames=NumberOfFrames,
                     interval=Delay_in_ms, blit=False, repeat=False)
-writer = PillowWriter(fps=25)
-ani.save(f"{Snapshot_output_dir}/animation.gif", writer=writer)
+# writer = PillowWriter(fps=25)
+# ani.save(f"{Snapshot_output_dir}/animation.gif", writer=writer)
 plt.show()
 
 '''Save the final configuration and make a snapshot.'''
