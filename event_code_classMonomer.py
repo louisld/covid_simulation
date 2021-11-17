@@ -3,7 +3,7 @@ import numpy as np
 
 import os
 from matplotlib.collections import EllipseCollection
-from matplotlib.animation import FuncAnimation
+from matplotlib.animation import FuncAnimation, PillowWriter
 import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
 
@@ -29,11 +29,11 @@ else:
     NumberMono_per_kind = np.array([NumberOfMonomers])
     Radiai_per_kind = np.array([0.05])
     Densities_per_kind = np.ones(len(NumberMono_per_kind))
-    k_BT = 0.005
+    k_BT = 0.01
     # call constructor, which should initialize the configuration
     mols = pc.Monomers(NumberOfMonomers, L_xMin, L_xMax, L_yMin, L_yMax,
                        NumberMono_per_kind, Radiai_per_kind,
-                       Densities_per_kind, k_BT)
+                       Densities_per_kind, k_BT, healing_time=4)
 
 mols.snapshot(FileName=Snapshot_output_dir + '/InitialConf.png',
               Title='$t = 0$')
@@ -116,17 +116,17 @@ ax[1].set_aspect('equal')
 # confining hard walls plotted as dashed lines
 rect = mpatches.Rectangle((L_xMin, L_yMin), L_xMax-L_xMin, L_yMax-L_yMin,
                           linestyle='dashed', ec='gray', fc='None')
-wall_down = mpatches.Rectangle((lockdown_position - wall_thickness/2, L_yMin),
-                               wall_thickness,
-                               (L_yMax - L_yMin - lockdown_opening)/2,
-                               linestyle="dashed", ec="gray", fc="none")
-wall_up = mpatches.Rectangle((lockdown_position - wall_thickness/2, L_yMax),
-                             wall_thickness,
-                             -(L_yMax - L_yMin - lockdown_opening)/2,
-                             linestyle="dashed", ec="gray", fc="none")
+# wall_down = mpatches.Rectangle((lockdown_position - wall_thickness/2, L_yMin),
+#                                wall_thickness,
+#                                (L_yMax - L_yMin - lockdown_opening)/2,
+#                                linestyle="dashed", ec="gray", fc="none")
+# wall_up = mpatches.Rectangle((lockdown_position - wall_thickness/2, L_yMax),
+#                              wall_thickness,
+#                              -(L_yMax - L_yMin - lockdown_opening)/2,
+#                              linestyle="dashed", ec="gray", fc="none")
 ax[1].add_patch(rect)
-ax[1].add_patch(wall_down)
-ax[1].add_patch(wall_up)
+# ax[1].add_patch(wall_down)
+# ax[1].add_patch(wall_up)
 
 
 # plotting all monomers as solid circles of individual color
@@ -148,9 +148,11 @@ ax[0].set_ylim(0, NumberOfMonomers)
 '''
 Create the animation, i.e. looping NumberOfFrames over the update function
 '''
-Delay_in_ms = 33.3  # dely between images/frames for plt.show()
+Delay_in_ms = 40  # dely between images/frames for plt.show()
 ani = FuncAnimation(fig, MolecularDynamicsLoop, frames=NumberOfFrames,
                     interval=Delay_in_ms, blit=False, repeat=False)
+writer = PillowWriter(fps=25)
+ani.save(f"{Snapshot_output_dir}/animation.gif", writer=writer)
 plt.show()
 
 '''Save the final configuration and make a snapshot.'''

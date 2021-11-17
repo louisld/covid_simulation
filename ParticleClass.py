@@ -80,7 +80,8 @@ class Monomers:
                  Radiai_per_kind=0.5*np.ones(1), Densities_per_kind=np.ones(1),
                  k_BT=1, FilePath='./Configuration.p', sick=5,
                  healing_time=2, healing_delta=0.5, close_frontier=True,
-                 frontier_position=2, frontier_opening=1):
+                 frontier_position=2, frontier_opening=1, lockdown=True,
+                 number_of_confined=150):
         try:
             self.__dict__ = pickle.load(open(FilePath, "rb"))
             print(f"IMPORTANT! System is initialized from file {FilePath}, "
@@ -108,20 +109,33 @@ class Monomers:
             """
             Covid simulation
             """
-            # lockdown walls
+            # frontier walls
             self.close_frontier = close_frontier
-            if self.lockdown:
+            if self.close_frontier:
                 self.frontier_opening = frontier_opening
                 self.frontier_position = frontier_position
+            # lockdown
+            self.lockdown = lockdown
+            self.NC = number_of_confined
             # 0 : healthy, 1 : sick, 2 : recovered
             self.health_state = np.zeros(self.NM)
-            self.health_state[:sick] = 1
+            if not self.lockdown:
+                self.health_state[:sick] = 1
+            else:
+                self.health_state[self.NC:self.NC + sick] = 1
             self.infection_t = np.ones(self.NM)*np.inf
             self.healing_t = -np.ones(self.NM)*np.inf
-            self.infection_t[:sick] = 0
-            self.healing_t[:sick] = np.random.normal(healing_time,
-                                                     healing_delta,
-                                                     sick)
+            if not self.lockdown:
+                self.infection_t[:sick] = 0
+                self.healing_t[:sick] = np.random.normal(healing_time,
+                                                         healing_delta,
+                                                         sick)
+            else:
+                self.infection_t[self.NC:self.NC + sick] = 0
+                self.healing_t[self.NC:self.NC + sick] = np.random.normal(healing_time,
+                                                                          healing_delta,
+                                                                          sick)
+
             self.healing_time = healing_time
             self.healing_delta = healing_delta
 
@@ -174,11 +188,14 @@ class Monomers:
         '''initialize velocities'''
         assert(k_BT > 0)
         for k in range(self.NM):
-            standDev = np.sqrt(k_BT / self.mass[k])
-            Ypsilon_x = -np.log(np.random.uniform())
-            Ypsilon_y = -np.log(np.random.uniform())
-            self.vel[k] = [standDev * np.sqrt(2.*Ypsilon_x),
-                           standDev * np.sqrt(2.*Ypsilon_y)]
+            if self.lockdown and k < self.NC:
+                self.vel[k] = [0, 0]
+            else:
+                standDev = np.sqrt(k_BT / self.mass[k])
+                Ypsilon_x = -np.log(np.random.uniform())
+                Ypsilon_y = -np.log(np.random.uniform())
+                self.vel[k] = [standDev * np.sqrt(2.*Ypsilon_x),
+                               standDev * np.sqrt(2.*Ypsilon_y)]
         # E_kin = sum_i m_i /2 v_i^2 = N * dim/2 k_BT
         # https://en.wikipedia.org/wiki/Ideal_gas_law#Energy_associated_with_a_gas
 
@@ -200,17 +217,21 @@ class Monomers:
         BoxLength = self.BoxLimMax - self.BoxLimMin
         while mono_new < self.NM and infiniteLoopTest < 10**4:
             infiniteLoopTest += 1
-            a = self.BoxLimMin[0] + self.rad[mono_new]
-            b = (self.BoxLimMin[0] + self.lockdown_position
-                 - self.wall_thickness/2 - self.rad[mono_new])
-            c = (self.BoxLimMin[0] + self.lockdown_position
-                 + self.wall_thickness/2 + self.rad[mono_new])
-            d = self.BoxLimMax[0] - self.rad[mono_new]
-            prob = np.array([b-a, d-c])
-            prob = prob/prob.sum()
-            x = np.random.choice([np.random.uniform(a, b),
-                                  np.random.uniform(c, d)],
-                                 p=prob)
+            # a = self.BoxLimMin[0] + self.rad[mono_new]
+            # b = (self.BoxLimMin[0] + self.frontier_position
+            #      - self.rad[mono_new])
+            # c = (self.BoxLimMin[0] + self.frontier_position
+            #      + self.rad[mono_new])
+            # d = self.BoxLimMax[0] - self.rad[mono_new]
+            # prob = np.array([b-a, d-c])
+            # prob = prob/prob.sum()
+            # x = np.random.choice([np.random.uniform(a, b),
+            #                       np.random.uniform(c, d)],
+            #                      p=prob)
+            # y = np.random.uniform(self.BoxLimMin[1] + self.rad[mono_new],
+            #                       self.BoxLimMax[1] - self.rad[mono_new])
+            x = np.random.uniform(self.BoxLimMin[0] + self.rad[mono_new],
+                                  self.BoxLimMax[0] - self.rad[mono_new])
             y = np.random.uniform(self.BoxLimMin[1] + self.rad[mono_new],
                                   self.BoxLimMax[1] - self.rad[mono_new])
             new_pos = np.array([x, y])
@@ -256,8 +277,11 @@ class Monomers:
             collision_list[:, i] = np.where(self.vel[:, i] > 0,
                                             collision_list_max,
                                             collision_list_min)
-            collision_dt[:, i] = ((collision_list[:, i] - self.pos[:, i])
-                                  / self.vel[:, i])
+            collision_dt[:, i] = np.where(self.vel[:, i] != 0,
+                                          ((collision_list[:, i]
+                                            - self.pos[:, i])
+                                           / self.vel[:, i]),
+                                          np.inf)
 
         c_mins_index = np.where(collision_dt == np.min(collision_dt))
         minCollTime = collision_dt[c_mins_index][0]
@@ -353,6 +377,12 @@ class Monomers:
         if next_event.Type == "wall":
             self.vel[next_event.mono_1, next_event.w_dir] *= -1
         else:
+            if self.vel[next_event.mono_1].all() == 0:
+                self.vel[next_event.mono_2] *= -1
+                return
+            elif self.vel[next_event.mono_2].all() == 0:
+                self.vel[next_event.mono_1] *= -1
+                return
             delta = (np.array(self.pos[next_event.mono_2]
                               - self.pos[next_event.mono_1]))
             delta_hat = delta / np.linalg.norm(delta)
