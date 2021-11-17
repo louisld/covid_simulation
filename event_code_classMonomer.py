@@ -38,6 +38,7 @@ else:
     close_frontier = True
     frontier_position = 2
     frontier_opening = 1
+    frontier_opening_time = 1
     # call constructor, which should initialize the configuration
     mols = pc.Monomers(NumberOfMonomers, L_xMin, L_xMax, L_yMin, L_yMax,
                        NumberMono_per_kind, Radiai_per_kind,
@@ -46,7 +47,8 @@ else:
                        lockdown=lockdown, number_of_confined=number_of_confined,
                        close_frontier=close_frontier,
                        frontier_opening=frontier_opening,
-                       frontier_position=frontier_position)
+                       frontier_position=frontier_position,
+                       frontier_opening_time=frontier_opening_time)
 
 mols.snapshot(FileName=Snapshot_output_dir + '/InitialConf.png',
               Title='$t = 0$')
@@ -64,15 +66,23 @@ health_plot_t = [0]
 health_plot_sick = [5]
 health_plot_healthy = [200]
 health_plot_healed = [200]
+wall_opened = False
 
 
 def MolecularDynamicsLoop(frame):
     '''
     The MD loop including update of frame for animation.
     '''
-    global t, mols, next_event
+    global t, mols, next_event, wall_opened
 
     next_frame_t = t + dt
+
+    if t > frontier_opening_time and not wall_opened:
+        wall_down.set_data([frontier_position, frontier_position],
+                           [L_yMin, L_yMax/2 - frontier_opening/2])
+        wall_up.set_data([frontier_position, frontier_position],
+                         [L_yMax/2 + frontier_opening/2, L_yMax])
+        wall_opened = True
 
     while t + next_event.dt < next_frame_t:
         mols.pos += mols.vel * next_event.dt
@@ -114,7 +124,7 @@ def MolecularDynamicsLoop(frame):
     collection.set_color(colors)
     collection.set_offsets(mols.pos)
     return (collection, line_healthy, line_sick, line_healed,
-            f_healthy, f_sick, f_healed)
+            f_healthy, f_sick, f_healed, wall_up, wall_down)
 
 
 '''We define and initalize the plot for the animation'''
@@ -129,10 +139,12 @@ ax[1].set_aspect('equal')
 # confining hard walls plotted as dashed lines
 rect = mpatches.Rectangle((L_xMin, L_yMin), L_xMax-L_xMin, L_yMax-L_yMin,
                           linestyle='dashed', ec='gray', fc='None')
-wall_down = ax[1].vlines(frontier_position, L_yMin, L_yMax/2, color="gray",
-                         linestyle="dashed", fc="none")
-wall_up = ax[1].vlines(frontier_position, L_yMax/2, L_yMax, color="gray",
-                       linestyle="dashed", fc="none")
+wall_down, = ax[1].plot([frontier_position, frontier_position],
+                        [L_yMin, L_yMax/2], color="gray",
+                        linestyle="dashed")
+wall_up, = ax[1].plot([frontier_position, frontier_position],
+                      [L_yMax/2, L_yMax], color="gray",
+                      linestyle="dashed")
 ax[1].add_patch(rect)
 
 

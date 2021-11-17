@@ -81,7 +81,7 @@ class Monomers:
                  k_BT=1, FilePath='./Configuration.p', sick=5,
                  healing_time=2, healing_delta=0.5, close_frontier=True,
                  frontier_position=2, frontier_opening=1, lockdown=True,
-                 number_of_confined=150):
+                 frontier_opening_time=5, number_of_confined=150):
         try:
             self.__dict__ = pickle.load(open(FilePath, "rb"))
             print(f"IMPORTANT! System is initialized from file {FilePath}, "
@@ -114,6 +114,7 @@ class Monomers:
             if self.close_frontier:
                 self.frontier_opening = frontier_opening
                 self.frontier_position = frontier_position
+                self.frontier_opening_time = frontier_opening_time
             # lockdown
             self.lockdown = lockdown
             self.NC = number_of_confined
@@ -260,7 +261,7 @@ class Monomers:
                     f"{self.pos[index]}\nvelocity = {self.vel[index]}\nradius"
                     f" = {self.rad[index]}\nmass = {self.mass[index]}")
 
-    def Wall_time(self):
+    def Wall_time(self, t):
         '''
         -Function computes list of remaining time dt until future
         wall collision in x and y direction for every particle.
@@ -274,8 +275,6 @@ class Monomers:
         collision_dt = np.zeros((self.NM, self.DIM))
         # Calculate all collision times
         for i in range(self.DIM):
-            collision_list_max = (self.BoxLimMax[i] - self.rad)
-            collision_list_min = (self.BoxLimMin[i] + self.rad)
             if i == 0 and self.close_frontier:
                 collision_list_max = np.where(self.pos[:, 0]
                                               < self.frontier_position,
@@ -286,15 +285,42 @@ class Monomers:
                                               self.frontier_position + self.rad,
                                               self.BoxLimMin[0] + self.rad)
 
-            collision_list[:, i] = np.where(self.vel[:, i] > 0,
-                                            collision_list_max,
-                                            collision_list_min)
-            collision_dt[:, i] = np.where(self.vel[:, i] != 0,
-                                          ((collision_list[:, i]
-                                            - self.pos[:, i])
-                                           / self.vel[:, i]),
-                                          np.inf)
-
+                collision_list[:, 0] = np.where(self.vel[:, 0] > 0,
+                                                collision_list_max,
+                                                collision_list_min)
+                collision_dt[:, 0] = np.where(self.vel[:, 0] != 0,
+                                              ((collision_list[:, i]
+                                                - self.pos[:, i])
+                                               / self.vel[:, i]),
+                                              np.inf)
+                if t < self.frontier_opening_time:
+                    continue
+                collision_dt[:, 0] = np.where((self.pos[:, 0]
+                                               < self.frontier_position)
+                                              & (self.vel[:, 0] > 0)
+                                              & ((self.pos[:, 1]
+                                                  + collision_dt[:, 0]
+                                                  * self.vel[:, 1])
+                                                 < (self.BoxLimMax[1]
+                                                    + self.frontier_opening)/2)
+                                              & ((self.pos[:, 1]
+                                                  + collision_dt[:, 0]
+                                                  * self.vel[:, 1])
+                                                 > (self.BoxLimMax[1]
+                                                    - self.frontier_opening)/2),
+                                              np.inf,
+                                              collision_dt[:, 0])
+            else:
+                collision_list_max = (self.BoxLimMax[i] - self.rad)
+                collision_list_min = (self.BoxLimMin[i] + self.rad)
+                collision_list[:, i] = np.where(self.vel[:, i] > 0,
+                                                collision_list_max,
+                                                collision_list_min)
+                collision_dt[:, i] = np.where(self.vel[:, i] != 0,
+                                              ((collision_list[:, i]
+                                                - self.pos[:, i])
+                                               / self.vel[:, i]),
+                                              np.inf)
         c_mins_index = np.where(collision_dt == np.min(collision_dt))
         minCollTime = collision_dt[c_mins_index][0]
         collision_disk = c_mins_index[0][0]
@@ -364,7 +390,7 @@ class Monomers:
         minimal time, i.e. the clostest in future.
         '''
 
-        self.Wall_time()
+        self.Wall_time(t)
         self.Mono_pair_time()
 
         for i in range(self.NM):
