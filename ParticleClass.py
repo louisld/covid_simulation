@@ -153,32 +153,16 @@ class Monomers:
 
     def save_configuration(self, FilePath='MonomerConfiguration.p'):
         '''Saves configuration. Callable at any time during simulation.'''
-        # print( self.__dict__ )
 
     def assignRadiaiMassesVelocities(self, NumberMono_per_kind=np.array([4]),
                                      Radiai_per_kind=0.5*np.ones(1),
                                      Densities_per_kind=np.ones(1), k_BT=1):
-        '''
-        Make this a PRIVATE function -> cannot be called outside class
-        definition.
-        '''
         '''initialize radiai and masses'''
         assert(sum(NumberMono_per_kind) == self.NM)
         assert(isinstance(Radiai_per_kind, np.ndarray)
                and (Radiai_per_kind.ndim == 1))
         assert((Radiai_per_kind.shape == NumberMono_per_kind.shape)
                and (Radiai_per_kind.shape == Densities_per_kind.shape))
-
-        # -->> your turn
-        # Monomers can be initialized with individual radiai and
-        # density = mass/volume.
-        # For example:
-        # NumberOfMonomers = 7
-        # NumberMono_per_kind = [ 2, 5]
-        # Radiai_per_kind = [ 0.2, 0.5]
-        # Densities_per_kind = [ 2.2, 5.5]
-        # then monomers mono_0, mono_1 have radius 0.2 and mass 2.2*pi*0.2^2
-        # and monomers mono_2,...,mono_6 have radius 0.5 and mass 5.5*pi*0.5^2
 
         l_nbr = len(NumberMono_per_kind)
         current_index = 0
@@ -200,26 +184,19 @@ class Monomers:
                 Ypsilon_y = -np.log(np.random.uniform())
                 self.vel[k] = [standDev * np.sqrt(2.*Ypsilon_x),
                                standDev * np.sqrt(2.*Ypsilon_y)]
-        # E_kin = sum_i m_i /2 v_i^2 = N * dim/2 k_BT
-        # https://en.wikipedia.org/wiki/Ideal_gas_law#Energy_associated_with_a_gas
-
-        # -->> your turn
-        # Initial configuration of $N$ monomers has velocities of random
-        # orientation and norms satisfying
-        # $E = \sum_i^N m_i / 2 (v_i)^2 = N d/2 k_B T$, with $d$ being
-        # the dimension,
-        # $k_B$ the Boltzmann constant, and $T$ the temperature.
 
     def assignRandomMonoPos(self, start_index=0):
         '''
-        Make this a PRIVATE function -> cannot be called outside class
-        definition.
         Initialize random positions without overlap between monomers and wall.
         '''
         assert (min(self.rad) > 0)  # otherwise not initialized
         mono_new, infiniteLoopTest, sick_counter = start_index, 0, 0
         while mono_new < self.NM and infiniteLoopTest < 10**4:
             infiniteLoopTest += 1
+            """
+            If border is closed monomers must not be put on the wall and
+            sick personn are initialized at the left of the wall.
+            """
             if self.close_frontier and sick_counter >= self.sick:
                 a = self.BoxLimMin[0] + self.rad[mono_new]
                 b = (self.BoxLimMin[0] + self.frontier_position
@@ -288,6 +265,11 @@ class Monomers:
         # Calculate all collision times
         for i in range(self.DIM):
             if i == 0 and self.close_frontier:
+                """
+                If border are closed we need to calculate collision time with walls
+                depending on the position of the monomer : at right or left of the
+                wall.
+                """
                 collision_list_max = np.where(
                     self.pos[:, 0] < self.frontier_position,
                     self.frontier_position - self.rad,
@@ -311,6 +293,11 @@ class Monomers:
                 )
                 if t < self.frontier_opening_time:
                     continue
+                """
+                If there is a hole in the wall, we need to verify if the
+                monomers can go through the wall. If it's the case it's not an
+                event of collision.
+                """
                 collision_dt[:, 0] = np.where(
                     (self.pos[:, 0] < self.frontier_position)
                     & (self.vel[:, 0] > 0)
