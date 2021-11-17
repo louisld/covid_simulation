@@ -26,9 +26,6 @@ else:
     NumberOfMonomers = 200
     L_xMin, L_xMax = 0, 10
     L_yMin, L_yMax = 0, 5
-    lockdown_position = 3
-    lockdown_opening = 1
-    wall_thickness = 0.5
     NumberMono_per_kind = np.array([NumberOfMonomers])
     Radiai_per_kind = np.array([0.05])
     Densities_per_kind = np.ones(len(NumberMono_per_kind))
@@ -36,8 +33,7 @@ else:
     # call constructor, which should initialize the configuration
     mols = pc.Monomers(NumberOfMonomers, L_xMin, L_xMax, L_yMin, L_yMax,
                        NumberMono_per_kind, Radiai_per_kind,
-                       Densities_per_kind, k_BT, lockdown_position,
-                       wall_thickness)
+                       Densities_per_kind, k_BT)
 
 mols.snapshot(FileName=Snapshot_output_dir + '/InitialConf.png',
               Title='$t = 0$')

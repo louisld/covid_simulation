@@ -78,9 +78,9 @@ class Monomers:
     def __init__(self, NumberOfMonomers=4, L_xMin=0, L_xMax=1, L_yMin=0,
                  L_yMax=1, NumberMono_per_kind=np.array([4]),
                  Radiai_per_kind=0.5*np.ones(1), Densities_per_kind=np.ones(1),
-                 k_BT=1, lockdown_position=-2, lockdown_opening=1,
-                 wall_thickness=1,  FilePath='./Configuration.p', sick=5,
-                 healing_time=2, healing_delta=0.5):
+                 k_BT=1, FilePath='./Configuration.p', sick=5,
+                 healing_time=2, healing_delta=0.5, close_frontier=True,
+                 frontier_position=2, frontier_opening=1):
         try:
             self.__dict__ = pickle.load(open(FilePath, "rb"))
             print(f"IMPORTANT! System is initialized from file {FilePath}, "
@@ -109,9 +109,10 @@ class Monomers:
             Covid simulation
             """
             # lockdown walls
-            self.lockdown_position = lockdown_position
-            self.lockdown_opening = lockdown_opening
-            self.wall_thickness = wall_thickness
+            self.close_frontier = close_frontier
+            if self.lockdown:
+                self.frontier_opening = frontier_opening
+                self.frontier_position = frontier_position
             # 0 : healthy, 1 : sick, 2 : recovered
             self.health_state = np.zeros(self.NM)
             self.health_state[:sick] = 1
