@@ -134,9 +134,11 @@ class Monomers:
                                                          sick)
             else:
                 self.infection_t[self.NC:self.NC + sick] = 0
-                self.healing_t[self.NC:self.NC + sick] = np.random.normal(healing_time,
-                                                                          healing_delta,
-                                                                          sick)
+                self.healing_t[self.NC:self.NC + sick] = np.random.normal(
+                    healing_time,
+                    healing_delta,
+                    sick
+                )
 
             self.healing_time = healing_time
             self.healing_delta = healing_delta
@@ -216,7 +218,6 @@ class Monomers:
         '''
         assert (min(self.rad) > 0)  # otherwise not initialized
         mono_new, infiniteLoopTest, sick_counter = start_index, 0, 0
-        BoxLength = self.BoxLimMax - self.BoxLimMin
         while mono_new < self.NM and infiniteLoopTest < 10**4:
             infiniteLoopTest += 1
             if self.close_frontier and sick_counter >= self.sick:
@@ -234,10 +235,14 @@ class Monomers:
                 y = np.random.uniform(self.BoxLimMin[1] + self.rad[mono_new],
                                       self.BoxLimMax[1] - self.rad[mono_new])
             elif self.close_frontier and sick_counter < self.sick:
-                x = np.random.uniform(self.BoxLimMin[0] + self.rad[mono_new],
-                                      self.frontier_position - self.rad[mono_new])
-                y = np.random.uniform(self.BoxLimMin[1] + self.rad[mono_new],
-                                      self.BoxLimMax[1] - self.rad[mono_new])
+                x = np.random.uniform(
+                    self.BoxLimMin[0] + self.rad[mono_new],
+                    self.frontier_position - self.rad[mono_new]
+                )
+                y = np.random.uniform(
+                    self.BoxLimMin[1] + self.rad[mono_new],
+                    self.BoxLimMax[1] - self.rad[mono_new]
+                )
                 sick_counter += 1
             else:
                 x = np.random.uniform(self.BoxLimMin[0] + self.rad[mono_new],
@@ -283,51 +288,54 @@ class Monomers:
         # Calculate all collision times
         for i in range(self.DIM):
             if i == 0 and self.close_frontier:
-                collision_list_max = np.where(self.pos[:, 0]
-                                              < self.frontier_position,
-                                              self.frontier_position - self.rad,
-                                              self.BoxLimMax[0] - self.rad)
-                collision_list_min = np.where(self.pos[:, 0]
-                                              > self.frontier_position,
-                                              self.frontier_position + self.rad,
-                                              self.BoxLimMin[0] + self.rad)
+                collision_list_max = np.where(
+                    self.pos[:, 0] < self.frontier_position,
+                    self.frontier_position - self.rad,
+                    self.BoxLimMax[0] - self.rad
+                )
+                collision_list_min = np.where(
+                    self.pos[:, 0] > self.frontier_position,
+                    self.frontier_position + self.rad,
+                    self.BoxLimMin[0] + self.rad
+                )
 
-                collision_list[:, 0] = np.where(self.vel[:, 0] > 0,
-                                                collision_list_max,
-                                                collision_list_min)
-                collision_dt[:, 0] = np.where(self.vel[:, 0] != 0,
-                                              ((collision_list[:, i]
-                                                - self.pos[:, i])
-                                               / self.vel[:, i]),
-                                              np.inf)
+                collision_list[:, 0] = np.where(
+                    self.vel[:, 0] > 0,
+                    collision_list_max,
+                    collision_list_min
+                )
+                collision_dt[:, 0] = np.where(
+                    self.vel[:, 0] != 0,
+                    (collision_list[:, i] - self.pos[:, i]) / self.vel[:, i],
+                    np.inf
+                )
                 if t < self.frontier_opening_time:
                     continue
-                collision_dt[:, 0] = np.where((self.pos[:, 0]
-                                               < self.frontier_position)
-                                              & (self.vel[:, 0] > 0)
-                                              & ((self.pos[:, 1]
-                                                  + collision_dt[:, 0]
-                                                  * self.vel[:, 1])
-                                                 < (self.BoxLimMax[1]
-                                                    + self.frontier_opening)/2)
-                                              & ((self.pos[:, 1]
-                                                  + collision_dt[:, 0]
-                                                  * self.vel[:, 1])
-                                                 > (self.BoxLimMax[1]
-                                                    - self.frontier_opening)/2),
-                                              np.inf,
-                                              collision_dt[:, 0])
+                collision_dt[:, 0] = np.where(
+                    (self.pos[:, 0] < self.frontier_position)
+                    & (self.vel[:, 0] > 0)
+                    & ((self.pos[:, 1] + collision_dt[:, 0]
+                        * self.vel[:, 1]) < (self.BoxLimMax[1]
+                                             + self.frontier_opening)/2)
+                    & ((self.pos[:, 1] + collision_dt[:, 0]
+                        * self.vel[:, 1]) > (self.BoxLimMax[1]
+                                             - self.frontier_opening)/2),
+                    np.inf,
+                    collision_dt[:, 0]
+                )
             else:
                 collision_list_max = (self.BoxLimMax[i] - self.rad)
                 collision_list_min = (self.BoxLimMin[i] + self.rad)
-                collision_list[:, i] = np.where(self.vel[:, i] > 0,
-                                                collision_list_max,
-                                                collision_list_min)
-                collision_dt[:, i] = np.where(self.vel[:, i] != 0,
-                                              ((collision_list[:, i]
-                                                - self.pos[:, i])
-                                               / self.vel[:, i]),
-                                              np.inf)
+                collision_list[:, i] = np.where(
+                    self.vel[:, i] > 0,
+                    collision_list_max,
+                    collision_list_min
+                )
+                collision_dt[:, i] = np.where(
+                    self.vel[:, i] != 0,
+                    (collision_list[:, i] - self.pos[:, i]) / self.vel[:, i],
+                    np.inf
+                )
         c_mins_index = np.where(collision_dt == np.min(collision_dt))
         minCollTime = collision_dt[c_mins_index][0]
         collision_disk = c_mins_index[0][0]
@@ -371,9 +379,11 @@ class Monomers:
         dt_collision_plus = 1/(2*a)*(-b + np.sqrt(Omega))
 
         dt_collision = np.array([dt_collision_minus, dt_collision_plus])
-        dt_collision_index = np.where(dt_collision > 0,
-                                      dt_collision,
-                                      np.inf)
+        dt_collision_index = np.where(
+            dt_collision > 0,
+            dt_collision,
+            np.inf
+        )
         dt_collision_index = np.where(dt_collision_index
                                       == np.min(dt_collision_index))
 
@@ -433,18 +443,22 @@ class Monomers:
             delta_hat = delta / np.linalg.norm(delta)
             delta_v = (np.array(self.vel[next_event.mono_1]
                                 - self.vel[next_event.mono_2]))
-            self.vel[next_event.mono_1] = (self.vel[next_event.mono_1]
-                                           - (2*self.mass[next_event.mono_2]
-                                              / (self.mass[next_event.mono_1]
-                                                 + self.mass[next_event.mono_2]))
-                                           * delta_hat @ np.transpose(delta_v)
-                                           * delta_hat)
-            self.vel[next_event.mono_2] = (self.vel[next_event.mono_2]
-                                           + (2*self.mass[next_event.mono_1]
-                                              / (self.mass[next_event.mono_1]
-                                                 + self.mass[next_event.mono_2]))
-                                           * delta_hat @ np.transpose(delta_v)
-                                           * delta_hat)
+            self.vel[next_event.mono_1] = (
+                self.vel[next_event.mono_1]
+                - (2*self.mass[next_event.mono_2]
+                   / (self.mass[next_event.mono_1]
+                      + self.mass[next_event.mono_2]))
+                * delta_hat @ np.transpose(delta_v)
+                * delta_hat
+            )
+            self.vel[next_event.mono_2] = (
+                self.vel[next_event.mono_2]
+                + (2*self.mass[next_event.mono_1]
+                   / (self.mass[next_event.mono_1]
+                      + self.mass[next_event.mono_2]))
+                * delta_hat @ np.transpose(delta_v)
+                * delta_hat
+            )
 
     def compute_new_health_state(self, next_event, t):
         if next_event.Type == "mono":
@@ -452,19 +466,21 @@ class Monomers:
                     and self.health_state[next_event.mono_2] == 0):
                 self.health_state[next_event.mono_2] = 1
                 self.infection_t[next_event.mono_2] = t
-                self.healing_t[next_event.mono_2] = (t
-                                                     + np.random.normal(
-                                                      loc=self.healing_time,
-                                                      scale=self.healing_delta
-                                                     ))
+                self.healing_t[next_event.mono_2] = (
+                    t + np.random.normal(
+                        loc=self.healing_time,
+                        scale=self.healing_delta
+                    )
+                )
             elif (self.health_state[next_event.mono_2] == 1
                     and self.health_state[next_event.mono_1] == 0):
                 self.health_state[next_event.mono_1] = 1
-                self.healing_t[next_event.mono_1] = (t
-                                                     + np.random.normal(
-                                                      loc=self.healing_time,
-                                                      scale=self.healing_delta
-                                                     ))
+                self.healing_t[next_event.mono_1] = (
+                    t + np.random.normal(
+                        loc=self.healing_time,
+                        scale=self.healing_delta
+                    )
+                )
 
     def snapshot(self, FileName='./snapshot.png', Title='$t = $?'):
         '''
