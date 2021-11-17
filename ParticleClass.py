@@ -276,6 +276,16 @@ class Monomers:
         for i in range(self.DIM):
             collision_list_max = (self.BoxLimMax[i] - self.rad)
             collision_list_min = (self.BoxLimMin[i] + self.rad)
+            if i == 0 and self.close_frontier:
+                collision_list_max = np.where(self.pos[:, 0]
+                                              < self.frontier_position,
+                                              self.frontier_position - self.rad,
+                                              self.BoxLimMax[0] - self.rad)
+                collision_list_min = np.where(self.pos[:, 0]
+                                              > self.frontier_position,
+                                              self.frontier_position + self.rad,
+                                              self.BoxLimMin[0] + self.rad)
+
             collision_list[:, i] = np.where(self.vel[:, i] > 0,
                                             collision_list_max,
                                             collision_list_min)
