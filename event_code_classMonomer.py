@@ -30,10 +30,17 @@ else:
     Radiai_per_kind = np.array([0.05])
     Densities_per_kind = np.ones(len(NumberMono_per_kind))
     k_BT = 0.01
+    sick = 5
+    healing_time = 2
+    healing_delta = 0.5
+    lockdown = False
+    number_of_confined = 150
     # call constructor, which should initialize the configuration
     mols = pc.Monomers(NumberOfMonomers, L_xMin, L_xMax, L_yMin, L_yMax,
                        NumberMono_per_kind, Radiai_per_kind,
-                       Densities_per_kind, k_BT, healing_time=4)
+                       Densities_per_kind, k_BT, sick=sick,
+                       healing_time=healing_time, healing_delta=healing_delta,
+                       lockdown=lockdown, number_of_confined=number_of_confined)
 
 mols.snapshot(FileName=Snapshot_output_dir + '/InitialConf.png',
               Title='$t = 0$')
