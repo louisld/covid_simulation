@@ -10,6 +10,12 @@ Monomers are in a box of a fixed height and width. They cannot go outside the bo
 
 To transform this model in a covid simulation, each monomer has an health state : healthy, sick or recovered. When a sick particule touch a healthy particle it becomes sick too for an amount of time following a normal distribution. After that it takes the recovered state. A recovered particles cannot become sick again.
 
+## Lockdown
+
+A lockdown is modeled with monomers which speed are null that represent people staying at home. However there are still people moving.
+
+![Lockdown](lockdown.gif?raw=true)
+
 ## Run the program
 
 Just run `python event_code_classMonomer.py`.

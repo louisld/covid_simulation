@@ -44,7 +44,7 @@ mols.snapshot(FileName=Snapshot_output_dir + '/InitialConf.png',
 '''define parameters for MD simulation'''
 t = 0.0
 dt = 0.02
-NumberOfFrames = 1000
+NumberOfFrames = 400
 next_event = mols.compute_next_event(t)
 
 health_plot_t = [0]
