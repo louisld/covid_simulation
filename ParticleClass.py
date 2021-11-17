@@ -119,6 +119,7 @@ class Monomers:
             self.lockdown = lockdown
             self.NC = number_of_confined
             # 0 : healthy, 1 : sick, 2 : recovered
+            self.sick = sick
             self.health_state = np.zeros(self.NM)
             if not self.lockdown:
                 self.health_state[:sick] = 1
@@ -214,11 +215,11 @@ class Monomers:
         Initialize random positions without overlap between monomers and wall.
         '''
         assert (min(self.rad) > 0)  # otherwise not initialized
-        mono_new, infiniteLoopTest = start_index, 0
+        mono_new, infiniteLoopTest, sick_counter = start_index, 0, 0
         BoxLength = self.BoxLimMax - self.BoxLimMin
         while mono_new < self.NM and infiniteLoopTest < 10**4:
             infiniteLoopTest += 1
-            if self.close_frontier:
+            if self.close_frontier and sick_counter >= self.sick:
                 a = self.BoxLimMin[0] + self.rad[mono_new]
                 b = (self.BoxLimMin[0] + self.frontier_position
                      - self.rad[mono_new])
@@ -232,6 +233,12 @@ class Monomers:
                                      p=prob)
                 y = np.random.uniform(self.BoxLimMin[1] + self.rad[mono_new],
                                       self.BoxLimMax[1] - self.rad[mono_new])
+            elif self.close_frontier and sick_counter < self.sick:
+                x = np.random.uniform(self.BoxLimMin[0] + self.rad[mono_new],
+                                      self.frontier_position - self.rad[mono_new])
+                y = np.random.uniform(self.BoxLimMin[1] + self.rad[mono_new],
+                                      self.BoxLimMax[1] - self.rad[mono_new])
+                sick_counter += 1
             else:
                 x = np.random.uniform(self.BoxLimMin[0] + self.rad[mono_new],
                                       self.BoxLimMax[0] - self.rad[mono_new])

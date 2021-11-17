@@ -38,7 +38,7 @@ else:
     close_frontier = True
     frontier_position = 2
     frontier_opening = 1
-    frontier_opening_time = 1
+    frontier_opening_time = 3
     # call constructor, which should initialize the configuration
     mols = pc.Monomers(NumberOfMonomers, L_xMin, L_xMax, L_yMin, L_yMax,
                        NumberMono_per_kind, Radiai_per_kind,

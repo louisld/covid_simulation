@@ -22,6 +22,14 @@ A lockdown is modeled with monomers which speed are null that represent people s
 
 ![Lockdown](lockdown.gif?raw=true)
 
+## Closing border
+
+A closed border is modeled by a wall in the simulation.
+
+![Closing border short](frontier_short.gif?raw=true)
+
+![Closing border long](frontier_long.gif?raw=true)
+
 ## Run the program
 
 Just run `python event_code_classMonomer.py`.
